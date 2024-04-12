@@ -6,12 +6,12 @@
 %image contains more than one channel, one of them must be selected. 
 %Users can define the order of the analysis (number of neighbors) and the
 %number of repeats for calculating pseudosignificance. The results are (i)
-%a graph displaying the global Moran's I, (ii) a map of significance values
-%(sites of nonrandom pixel values) and (iii) map of high and low intensity
-%pixel clusters. In case of brightfield images the low values represent the
-%detected objects, whereas in case of fluorescent images the hight values
+%a graph displaying the global Moran's I (Pf(1,1)), (ii) a map of 
+%significance values (sites of nonrandom pixel values, kep_sig) and 
+%(iii) map of high and low intensity pixel clusters (kep_kl).
+%In case of brightfield images, the low values represent the detected 
+%objects, whereas in case of fluorescent images the high values
 %do that.
-
 
 %you can change parameters till the double dashed line
 tic;
