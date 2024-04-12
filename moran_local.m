@@ -1,18 +1,46 @@
 %%------Local Moran's I calculations-------
-% for theoretical details see Dávid et al.......
+%for theoretical details see Dávid et al. 
+%https://doi.org/10.7554/eLife.89361.1
+%This script calculates the local Moran's I map for images. General image
+%formats can be used (e.g. jpg, tif etc), preferably grayscales. If the
+%image contains more than one channel, one of them must be selected. 
+%Users can define the order of the analysis (number of neighbors) and the
+%number of repeats for calculating pseudosignificance. The results are (i)
+%a graph displaying the global Moran's I, (ii) a map of significance values
+%(sites of nonrandom pixel values) and (iii) map of high and low intensity
+%pixel clusters. In case of brightfield images the low values represent the
+%detected objects, whereas in case of fluorescent images the hight values
+%do that.
+
 
 %you can change parameters till the double dashed line
 tic;
-%Import the tiff or jpg file and rename it for kep
-[M,N]=size(kep);
+[filename,user_canceled] = imgetfile;
+img0 = imread(filename);
+[s1,s2,s3]=size(img0);
+if s3>1
+    prompt={'Which channel would you like to use?'};
+    dlgtitle='Choose channel';
+    fieldsize=[1 45];
+    definput={'1'};
+    answer0=inputdlg(prompt,dlgtitle,fieldsize,definput)
+    img=img0(:,:,str2double(answer0{1,1}));
+else
+    img=img0;
+
+end
+
+
+%Import the tiff or jpg file and rename it for img
+[M,N]=size(img);
 
 %different orders can be tested, must be listed here
 %ords=[1;2;3;4;5;6;7;8;9;10;16;32;64];
-ords=[8];
+ords=[1];
 ord=numel(ords);
 
 %Results to csv?
-csvw=1;
+csvw=0;
 %if it will be written in csv, then it'll be its name
 %if a file with the same name exist, it will be overwritten
 ne=['my_morans_csv_'];
@@ -24,6 +52,20 @@ Ga=1;
 %number of repeats for calculating psudosignificance
 ism=99;
 
+prompt={'Enter Morans order', 'Enter number of repeats'};
+dlgtitle='Parameter input';
+fieldsize=[1 45; 1 45];
+definput={'1', '99'};
+answer= inputdlg(prompt,dlgtitle,fieldsize,definput)
+ords=str2double(answer{1,1});
+ord=numel(ords);
+ism=str2double(answer{2,1});
+
+%significance levels
+szign=[0.05;0.01;0.001;0.0001];
+sigList={'<0.05','<0.01','<0.001','<0.0001'};
+[szi,tf] = listdlg('ListString',sigList)
+
 %do not change the parameters below
 %- - - - - - - - - - - -
 %- - - - - - - - - - - -
@@ -32,7 +74,7 @@ ism=99;
 scrS=get(0,'ScreenSize');
 mer=M*N;
 %conversion in one column
-ko=reshape(kep,mer,1);
+ko=reshape(img,mer,1);
 ko=double(ko);
 
 %mean, SD 
@@ -92,9 +134,9 @@ for oo=1:ord
     
     %original image
     figure;
-    imshow(kep);
+    imshow(img);
     title('Original image');
-    movegui([25.*(oo-1)+600, scrS(1,4)-500]);
+    movegui([25.*(oo-1), scrS(1,4)-500]);
    
     %Moran's global I scatterplot
     figure;
@@ -113,7 +155,7 @@ for oo=1:ord
     xlim([min(xpl)-0.1*(max(xpl)-min(xpl)) max(xpl)+0.1*(max(xpl)-min(xpl))]);
     ylim([min(ypl)-0.1*(max(ypl)-min(ypl)) max(ypl)+0.1*(max(ypl)-min(ypl))]);
     
-    movegui([25.*(oo-1), scrS(1,4)-500]);
+    movegui([25.*(oo-1)+600, scrS(1,4)-500]);
     Iertekek(oo)=Pf(1);
     hold off
     
@@ -143,7 +185,7 @@ for oo=1:ord
     p_perm=(p_p)./(ism+1);
         
     %significance levels
-    szign=[0.05;0.01;0.001;0.0001];
+    % szign=[0.05;0.01;0.001;0.0001];
     
     %labeling of clasters according to their values and their neighborhood
     %0=non significant
@@ -157,8 +199,8 @@ for oo=1:ord
     
     P_perm=reshape(p_perm,M*N,1);
     
-    szi=2;
-    %all pixels where p_perm<0.05 will be clasificated as cluster
+    
+    %all pixels where p_perm<0.05 will be classified as cluster
     kl(P_perm<=szign(szi) & xpl>0 & ypl>0)=1;
     kl(P_perm<=szign(szi) & xpl<0 & ypl<0)=2;
     kl(P_perm<=szign(szi) & xpl<0 & ypl>0)=3;
@@ -172,11 +214,11 @@ for oo=1:ord
     kl(3)=3;
     kl(4)=4;
     
-    %map of significance
-    sig(P_perm<=szign(1))=1;
-    sig(P_perm<=szign(2))=2;
-    sig(P_perm<=szign(3))=3;
-    sig(P_perm<=szign(4))=4;
+%     %map of significance
+      sig(P_perm<=szign(szi))=1;
+%     sig(P_perm<=szign(2))=2;
+%     sig(P_perm<=szign(3))=3;
+%     sig(P_perm<=szign(4))=4;
     
     kep_kl=reshape(kl,M,N);
     %writing to csv
@@ -193,12 +235,24 @@ for oo=1:ord
     title({'Map of significance';['ord=' num2str(o) ', I='  num2str(Pf(1))]});
     axis equal
     ylim([0,M])
-     map=[0.9 0.9 0.9; 0.7 1 0.7; 0.5 0.9 0.5; 0.3 0.9 0.3 ;0.1 0.9 0.1];
+    % map=[0.9 0.9 0.9; 0.7 1 0.7; 0.5 0.9 0.5; 0.3 0.9 0.3 ;0.1 0.9 0.1];
+    map=[0.9 0.9 0.9; 0.1 0.9 0.1];
     colormap(map);
-    movegui([25.*(oo-1)+600, scrS(1,4)-1000]);
+    
+    hold on
+    nl=2;
+     L = line(ones(nl),ones(nl), 'LineWidth',2);               
+     set(L,{'color'},mat2cell(map,ones(1,nl),3));            
+   % legend('NS','<0.05','<0.01','<0.001','<0.0001'); 
+    legend('NS',sigList{szi});
+    legend('Location','northeastoutside')
+
+    movegui([25.*(oo-1), scrS(1,4)-1000]);
+
        
     
     figure
+    
     imagesc(kep_kl);
     %Cluster map
     title({'Clusters';['ord=' num2str(o) ', I='  num2str(Pf(1))]});
@@ -206,8 +260,15 @@ for oo=1:ord
     ylim([0,M])
     map=[0.9 0.9 0.9; 1 0.2 0.2; 0.2 0.2 1; 0.7 0.7 1;1 0.7 0.7];
     colormap(map);
-    movegui([25.*(oo-1), scrS(1,4)-1000]);
-    
+
+    hold on
+    nl=5;
+     L = line(ones(nl),ones(nl), 'LineWidth',2);               
+     set(L,{'color'},mat2cell(map,ones(1,nl),3));            
+     legend('NS', 'High','Low','', '');  
+     legend('Location','northeastoutside')
+     movegui([25.*(oo-1)+600, scrS(1,4)-1000]);
+
     ido(oo)=toc;
 
 end %end oo loop
